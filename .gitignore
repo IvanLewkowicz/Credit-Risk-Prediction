@@ -3,7 +3,8 @@
 
 # Mac OS-specific storage files
 .DS_Store
-
+# MLflow
+**/mlruns
 # vim
 *.swp
 *.swo
