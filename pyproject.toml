@@ -26,6 +26,7 @@ dependencies = [
     "numpy>=2.2.6",
     "pandas>=2.3.3",
     "pip",
+    "plotly>=6.4.0",
     "pre-commit>=4.3.0",
     "python-dotenv",
     "scikit-learn>=1.7.2",
