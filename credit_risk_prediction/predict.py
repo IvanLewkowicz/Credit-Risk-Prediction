@@ -200,14 +200,14 @@ class ModelPredictor:
 if __name__ == "__main__":
     # Initialize
     predictor = ModelPredictor(
-        model_path="models/xgb_model.joblib",
-        explainer_path="models/xgb_shap_explainer.joblib"
+        model_path="../models/xgb_model.joblib",
+        explainer_path="../models/xgb_shap_explainer.joblib"
     )
 
-    # Example 1: Predict from CSV
-    preds, probs = predictor.predict_from_csv("data/test_data.csv")
-    print(f"Predictions: {preds[:5]}")
-    print(f"Probabilities: {probs[:5]}")
+    # # Example 1: Predict from CSV
+    # preds, probs = predictor.predict_from_csv("data/test_data.csv")
+    # print(f"Predictions: {preds[:5]}")
+    # print(f"Probabilities: {probs[:5]}")
 
     # Example 2: Predict from dict with EL
     customer = {
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     print(f"\nPrediction with EL:")
     print(result)
 
-    # Example 3: SHAP values
-    df = pd.read_csv("data/test_data.csv")
-    shap_vals = predictor.shap_values(df.head(10))
-    print(f"\nSHAP shape: {shap_vals.shape}")
+    # # Example 3: SHAP values
+    # df = pd.read_csv("data/test_data.csv")
+    # shap_vals = predictor.shap_values(df.head(10))
+    # print(f"\nSHAP shape: {shap_vals.shape}")
