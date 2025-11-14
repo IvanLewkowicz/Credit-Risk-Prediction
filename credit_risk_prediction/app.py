@@ -5,8 +5,8 @@ from credit_risk_prediction.predict import ModelPredictor
 
 # Initialize predictor
 predictor = ModelPredictor(
-    model_path="../models/xgb_model.joblib",
-    explainer_path="../models/xgb_shap_explainer.joblib",
+    model_path="/app/models/xgb_model.joblib",
+    explainer_path="/app/models/xgb_shap_explainer.joblib",
     default_lgd=0.45
 )
 
