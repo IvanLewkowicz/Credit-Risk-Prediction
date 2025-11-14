@@ -1,21 +1,22 @@
-FROM python:3.11-slim
-
-# Install uv
-RUN pip install uv
+# -----------------------------------------
+#  Base image with uv (Python 3.11)
+# -----------------------------------------
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS base
 
 WORKDIR /app
 
-# Copy dependencies
-COPY pyproject.toml uv.lock ./
+# Copy dependency files first (for better caching)
+COPY pyproject.toml uv.lock README.md ./
+COPY credit_risk_prediction ./credit_risk_prediction
 
-RUN uv sync
+# Install dependencies
+RUN uv sync --locked
 
-# Copy project
-COPY . .
+# Copy project code
 
-# Set environment variables
-ENV PYTHONPATH=/app
-ENV MLFLOW_TRACKING_URI=file:/app/mlruns
+# Expose ports for API + Streamlit
+EXPOSE 8000
+EXPOSE 8501
 
-# Run Streamlit (or Flask)
-CMD ["streamlit", "run", "src/app/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Default command (overridden by docker-compose)
+CMD ["bash"]
