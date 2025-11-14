@@ -40,12 +40,16 @@ st.markdown("""
         background-color: #d4edda;
         color: #28a745;
     }
+    .el-box {
+        background-color: #e3f2fd;
+        color: #1565c0;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 
 st.title("💳 Credit Risk Assessment Model")
-st.markdown("*Predict Probability of Default (PD) with Model Explainability*")
+st.markdown("*Predict Probability of Default (PD) with Expected Loss & Model Explainability*")
 
 
 # -----------------------------------------------
@@ -131,6 +135,29 @@ FEATURE_CONFIG = {
         "step": 1,
         "default": 0,
         "description": "Number of dependents"
+    }
+}
+
+
+# -----------------------------------------------
+# EXPECTED LOSS PARAMETERS CONFIG
+# -----------------------------------------------
+EL_PARAMS_CONFIG = {
+    "LGD": {
+        "min": 0.0,
+        "max": 1.0,
+        "step": 0.05,
+        "default": 0.45,
+        "description": "Loss Given Default (fraction of exposure lost at default)",
+        "help": "Typical range: 0.25-0.75 depending on collateral and seniority"
+    },
+    "EAD": {
+        "min": 0,
+        "max": 100000,
+        "step": 1000,
+        "default": 10000,
+        "description": "Exposure at Default (loan amount in dollars)",
+        "help": "Amount of credit extended to the customer"
     }
 }
 
@@ -226,6 +253,59 @@ with tab_debt:
 
 
 # -----------------------------------------------
+# EXPECTED LOSS PARAMETERS SECTION
+# -----------------------------------------------
+st.sidebar.divider()
+st.sidebar.header("💰 Expected Loss (EL) Parameters")
+st.sidebar.markdown("Configure risk parameters: **EL = PD × LGD × EAD**")
+
+el_params = {}
+
+col1, col2 = st.sidebar.columns(2)
+
+with col1:
+    el_params["LGD"] = st.slider(
+        label="Loss Given Default (LGD)",
+        min_value=EL_PARAMS_CONFIG["LGD"]["min"],
+        max_value=EL_PARAMS_CONFIG["LGD"]["max"],
+        value=EL_PARAMS_CONFIG["LGD"]["default"],
+        step=EL_PARAMS_CONFIG["LGD"]["step"],
+        help=EL_PARAMS_CONFIG["LGD"]["help"]
+    )
+
+with col2:
+    el_params["EAD"] = st.slider(
+        label="Exposure at Default (EAD)",
+        min_value=EL_PARAMS_CONFIG["EAD"]["min"],
+        max_value=EL_PARAMS_CONFIG["EAD"]["max"],
+        value=EL_PARAMS_CONFIG["EAD"]["default"],
+        step=int(EL_PARAMS_CONFIG["EAD"]["step"]),
+        help=EL_PARAMS_CONFIG["EAD"]["help"]
+    )
+
+# Show parameter descriptions
+with st.sidebar.expander("ℹ️ About EL Parameters"):
+    st.markdown("""
+    **Probability of Default (PD)**
+    - Predicted by our ML model
+    - Probability the customer defaults within 1 year
+    
+    **Loss Given Default (LGD)**
+    - What % of the loan is lost if default occurs
+    - 0.45 = 45% loss (55% recovery through collateral/collections)
+    - Depends on: collateral, seniority, industry
+    
+    **Exposure at Default (EAD)**
+    - Amount of credit extended (loan principal)
+    - Dollar amount at risk
+    
+    **Expected Loss = PD × LGD × EAD**
+    - Expected monetary loss for this loan
+    - Used for capital allocation & pricing
+    """)
+
+
+# -----------------------------------------------
 # RESET BUTTON IN SIDEBAR
 # -----------------------------------------------
 if st.sidebar.button("🔄 Reset to Defaults", use_container_width=True):
@@ -275,9 +355,9 @@ if st.button("🔮 Predict Probability of Default", use_container_width=True):
             features_list = shap_resp.get("features", list(user_input.keys()))
 
             # -----------------------------------------------
-            # RISK CLASSIFICATION & MAIN METRIC
+            # RISK CLASSIFICATION & MAIN METRICS
             # -----------------------------------------------
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
 
             with col1:
                 if probability < 0.33:
@@ -314,6 +394,85 @@ if st.button("🔮 Predict Probability of Default", use_container_width=True):
                     <p>Default: {prediction}</p>
                     </div>
                 """, unsafe_allow_html=True)
+
+            # -----------------------------------------------
+            # EXPECTED LOSS CALCULATION & VISUALIZATION
+            # -----------------------------------------------
+            with col4:
+                el = probability * el_params["LGD"] * el_params["EAD"]
+                st.markdown(f"""
+                    <div class="metric-box el-box">
+                    <h3>Expected Loss</h3>
+                    <h2>${el:,.2f}</h2>
+                    <p>EL = PD × LGD × EAD</p>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            # -----------------------------------------------
+            # EXPECTED LOSS DETAILED BREAKDOWN
+            # -----------------------------------------------
+            st.divider()
+            st.subheader("💰 Expected Loss Analysis")
+
+            el_col1, el_col2 = st.columns([1.5, 1])
+
+            with el_col1:
+                st.markdown("**Expected Loss Components**")
+
+                # Create detailed EL breakdown table
+                el_breakdown = pd.DataFrame({
+                    "Component": ["Probability of Default (PD)", "Loss Given Default (LGD)", "Exposure at Default (EAD)", "Expected Loss (EL)"],
+                    "Value": [f"{probability:.2%}", f"{el_params['LGD']:.2%}", f"${el_params['EAD']:,.0f}", f"${el:,.2f}"],
+                    "Formula": ["Model prediction", "Risk parameter", "Loan amount", "PD × LGD × EAD"]
+                })
+
+                st.dataframe(el_breakdown, use_container_width=True, hide_index=True)
+
+                # Risk-adjusted pricing suggestion
+                annual_rate = 0.05  # Base rate 5%
+                el_spread = (el / el_params["EAD"]) * 100 if el_params["EAD"] > 0 else 0
+                suggested_rate = annual_rate + (el_spread / 12)  # Annualized
+
+                st.markdown("**Risk-Adjusted Pricing Recommendation**")
+                st.info(
+                    f"Base Annual Rate: {annual_rate:.2%}\n\n"
+                    f"EL as % of EAD: {el_spread:.2f}%\n\n"
+                    f"Suggested Annual Rate: {suggested_rate:.2%}"
+                )
+
+            with el_col2:
+                st.markdown("**EL Sensitivity**")
+
+                # Create sensitivity heatmap data
+                pd_range = np.linspace(0, probability * 2, 5)
+                lgd_range = np.linspace(0.2, 0.8, 5)
+
+                sensitivity_matrix = np.zeros((len(lgd_range), len(pd_range)))
+                for i, lgd in enumerate(lgd_range):
+                    for j, pd in enumerate(pd_range):
+                        sensitivity_matrix[i, j] = pd * lgd * el_params["EAD"]
+
+                fig, ax = plt.subplots(figsize=(8, 5))
+                im = ax.imshow(sensitivity_matrix, cmap='RdYlGn_r', aspect='auto')
+
+                ax.set_xticks(range(len(pd_range)))
+                ax.set_yticks(range(len(lgd_range)))
+                ax.set_xticklabels([f"{p:.1%}" for p in pd_range], fontsize=9)
+                ax.set_yticklabels([f"{l:.1%}" for l in lgd_range], fontsize=9)
+                ax.set_xlabel("Probability of Default", fontsize=10)
+                ax.set_ylabel("Loss Given Default", fontsize=10)
+                ax.set_title("Expected Loss Sensitivity ($)", fontsize=11, fontweight='bold')
+
+                # Add text annotations
+                for i in range(len(lgd_range)):
+                    for j in range(len(pd_range)):
+                        text = ax.text(j, i, f'${sensitivity_matrix[i, j]:,.0f}',
+                                     ha="center", va="center", color="black", fontsize=8)
+
+                plt.colorbar(im, ax=ax, label="Expected Loss ($)")
+                plt.tight_layout()
+                st.pyplot(fig, use_container_width=True)
+                plt.close()
 
             # -----------------------------------------------
             # SHAP VISUALIZATIONS
@@ -383,15 +542,15 @@ if st.button("🔮 Predict Probability of Default", use_container_width=True):
             st.dataframe(df_impact, use_container_width=True, hide_index=True)
 
             # -----------------------------------------------
-            # SCENARIO ANALYSIS
+            # SCENARIO ANALYSIS WITH EL IMPACT
             # -----------------------------------------------
             st.divider()
-            st.subheader("🎯 Quick What-If Scenarios")
+            st.subheader("🎯 What-If Scenarios")
 
-            scenario_col1, scenario_col2 = st.columns(2)
+            scenario_col1, scenario_col2, scenario_col3 = st.columns(3)
 
             with scenario_col1:
-                if st.button("📉 What if income increases 20%?"):
+                if st.button("📉 Income +20%"):
                     scenario_input = user_input.copy()
                     scenario_input["MonthlyIncome"] *= 1.2
 
@@ -401,12 +560,17 @@ if st.button("🔮 Predict Probability of Default", use_container_width=True):
                     ).json()
 
                     new_prob = scenario_resp.get("probability", 0.0)
-                    change = (new_prob - probability) / probability * 100
+                    new_el = new_prob * el_params["LGD"] * el_params["EAD"]
+                    el_change = new_el - el
+                    pd_change = (new_prob - probability) / probability * 100
 
-                    st.info(f"📊 New PD: {new_prob:.2%} | Change: {change:+.1f}%")
+                    st.info(
+                        f"📊 New PD: {new_prob:.2%} ({pd_change:+.1f}%)\n\n"
+                        f"💰 New EL: ${new_el:,.2f} ({el_change:+.2f})"
+                    )
 
             with scenario_col2:
-                if st.button("📉 What if debt ratio decreases 20%?"):
+                if st.button("📉 Debt Ratio -20%"):
                     scenario_input = user_input.copy()
                     scenario_input["DebtRatio"] *= 0.8
 
@@ -416,9 +580,36 @@ if st.button("🔮 Predict Probability of Default", use_container_width=True):
                     ).json()
 
                     new_prob = scenario_resp.get("probability", 0.0)
-                    change = (new_prob - probability) / probability * 100
+                    new_el = new_prob * el_params["LGD"] * el_params["EAD"]
+                    el_change = new_el - el
+                    pd_change = (new_prob - probability) / probability * 100
 
-                    st.info(f"📊 New PD: {new_prob:.2%} | Change: {change:+.1f}%")
+                    st.info(
+                        f"📊 New PD: {new_prob:.2%} ({pd_change:+.1f}%)\n\n"
+                        f"💰 New EL: ${new_el:,.2f} ({el_change:+.2f})"
+                    )
+
+            with scenario_col3:
+                if st.button("💳 Late Payments: 0"):
+                    scenario_input = user_input.copy()
+                    scenario_input["NumberOfTime30-59DaysPastDueNotWorse"] = 0
+                    scenario_input["NumberOfTime60-89DaysPastDueNotWorse"] = 0
+                    scenario_input["NumberOfTimes90DaysLate"] = 0
+
+                    scenario_resp = requests.post(
+                        f"{API_URL}/predict",
+                        json={"__root__": scenario_input}
+                    ).json()
+
+                    new_prob = scenario_resp.get("probability", 0.0)
+                    new_el = new_prob * el_params["LGD"] * el_params["EAD"]
+                    el_change = new_el - el
+                    pd_change = (new_prob - probability) / probability * 100
+
+                    st.info(
+                        f"📊 New PD: {new_prob:.2%} ({pd_change:+.1f}%)\n\n"
+                        f"💰 New EL: ${new_el:,.2f} ({el_change:+.2f})"
+                    )
 
     except requests.exceptions.ConnectionError:
         st.error(
@@ -435,7 +626,7 @@ if st.button("🔮 Predict Probability of Default", use_container_width=True):
 st.divider()
 st.markdown("""
     <div style='text-align: center; color: gray; font-size: 12px; margin-top: 20px;'>
-    💡 This model predicts Probability of Default (PD) based on credit metrics.
-    Use SHAP explanations to understand model decisions.
+    💡 This model predicts Probability of Default (PD) and calculates Expected Loss (EL).
+    Use SHAP explanations to understand model decisions. EL = PD × LGD × EAD for financial impact quantification.
     </div>
 """, unsafe_allow_html=True)
