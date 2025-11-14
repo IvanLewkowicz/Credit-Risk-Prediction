@@ -21,7 +21,7 @@ st.title("📊 Credit Risk Prediction & Explainability")
 st.sidebar.header("API Settings")
 api_url = st.sidebar.text_input(
     "FastAPI URL:",
-    value="http://localhost:8000"
+    value="http://api:8000"
 )
 
 # Utils
