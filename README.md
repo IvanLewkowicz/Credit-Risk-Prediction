@@ -75,22 +75,6 @@ Credit risk assessment is a critical task in financial services, aimed at evalua
 - Docker Compose orchestrates multi-container deployment, linking API and frontend with volume mounts for models.
 - README contains step-by-step instructions for building, running, and managing containers.
 
----
-
-## Cloud Deployment with Render
-
-- Detailed deployment instructions included for [Render](https://render.com/), a popular cloud platform for easy container app deployment.
-- Configurations provided for building Docker images and deploying with environment variables.
-- Includes setup for continuous deployment from GitHub repo.
-- Live URL example accessible after deployment to demonstrate working system online.
-
----
-
-## Live Demo
-
-A live demo of the deployed application is available at:  
-[https://your-render-app.onrender.com](https://your-render-app.onrender.com)  
-(Check your Render dashboard for the exact URL after deployment)
 
 ---
 
@@ -99,16 +83,14 @@ A live demo of the deployed application is available at:
 credit-risk-prediction/
 ├── data/raw/cs-training.csv # Raw training data
 ├── models/ # Model artifacts and explainers
-├── src/
+├── credit_risk_prediction/
 │ ├── train.py # Model training pipeline
 │ ├── predict.py # Model prediction and explanation logic
-│ ├── api.py # FastAPI backend
-│ └── app.py # Streamlit frontend
-├── docker/
-│ ├── Dockerfile.api # API container build
-│ ├── Dockerfile.app # Streamlit container build
-│ └── docker-compose.yml # Compose orchestration
-├── requirements.txt # Python dependencies
+│ ├── app.py # FastAPI backend
+│ └── streamlit_app.py # Streamlit frontend
+├── Dockerfile # Compose with the proyect
+├── docker-compose.yml # Compose orchestration
+├── pyproject.toml # Python dependencies
 ├── README.md # This documentation
 └── LICENSE # License information
 ```
@@ -129,7 +111,7 @@ uv add --lock
 
 ```
 
-2. Train the model: `python src/train.py`
+2. Train the model: `python credit_risk_prediction/train.py`
 3. Start API server: `uvicorn credit_risk_prediction.app:app --host 0.0.0.0 --port 8000 --workers 4`
 4. Start frontend: `streamlit run credit_risk_prediction/streamlit_app.py --server.port=8501`
 5. Open browser: frontend at http://localhost:8501 and API docs at http://localhost:8000/docs
@@ -153,8 +135,7 @@ uv add --lock
 Author: Ivan Lewkowicz  
 GitHub: [https://github.com/IvanLewkowicz/Credit-Risk-Prediction](https://github.com/IvanLewkowicz/Credit-Risk-Prediction)  
 LinkedIn: [https://linkedin.com/in/ivan-lewkowicz](https://linkedin.com/in/ivan-lewkowicz)  
-Email: your.email@example.com
-
+Email: ivanlewkowicz@hotmail.com
 ---
 
 ## License
